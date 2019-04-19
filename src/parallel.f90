@@ -3912,7 +3912,7 @@ subroutine unpack_localized_grid_dt(lcell,grid_elem,grid_xyz,grid)
   use ovar,          only : grid_format,plot3d_agglomerate_order
   use module_cgns,   only : cgns_element_properties
   use module_gmsh,   only : gmsh_element_properties
-  use module_plot3d, only : plot3d_element_properties
+  ! use module_plot3d, only : plot3d_element_properties
   !
   !.. Formal Arguments ..
   integer,                      intent(in) :: lcell
@@ -3967,9 +3967,9 @@ continue
       grid%elem(nc)%prop = gmsh_element_properties(elem_type)
     else if (grid_format == CGNS_Format) then
       grid%elem(nc)%prop = cgns_element_properties(elem_type)
-    else if (grid_format == Plot3D_Format) then
-      plot3d_order = max(1,plot3d_agglomerate_order)
-      grid%elem(nc)%prop = plot3d_element_properties(elem_type,plot3d_order)
+    ! else if (grid_format == Plot3D_Format) then
+    !   plot3d_order = max(1,plot3d_agglomerate_order)
+    !   grid%elem(nc)%prop = plot3d_element_properties(elem_type,plot3d_order)
     else
       grid%elem(nc)%prop = linear_element_properties(elem_type)
     end if
@@ -9467,7 +9467,7 @@ subroutine report_parallel_memory_usage(xadj,adjncy,epart,node,edge,face, &
   use geovar,        only : geovar_memory_usage
   use ovar,          only : ovar_memory_usage
   use flowvar,       only : flowvar_memory_usage
-  use module_plot3d, only : plot3d_memory_usage
+  ! use module_plot3d, only : plot3d_memory_usage
   use module_gmsh,   only : gmsh_memory_usage
   use module_cgns,   only : cgns_memory_usage
   !

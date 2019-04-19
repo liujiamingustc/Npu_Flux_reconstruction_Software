@@ -27,11 +27,11 @@ $(OBJDIR)/main.o : main.f90 \
          $(OBJDIR)/limiters.o \
          $(OBJDIR)/postproc_mod.o \
          $(OBJDIR)/restart_mod.o \
-         $(OBJDIR)/plot3d_mod.o \
          $(OBJDIR)/gmsh_mod.o \
          $(OBJDIR)/cgns_mod.o \
          $(OBJDIR)/averaging_mod.o \
          $(OBJDIR)/cpu_info_mod.o
+         # $(OBJDIR)/plot3d_mod.o \
 
 $(OBJDIR)/averaging_mod.o : averaging_mod.f90 \
                   $(OBJDIR)/kind_types.o \
@@ -248,7 +248,6 @@ $(OBJDIR)/io.o : io.f90 \
        $(OBJDIR)/metrics.o \
        $(OBJDIR)/flowvar_mod.o \
        $(OBJDIR)/gmsh_mod.o \
-       $(OBJDIR)/plot3d_mod.o \
        $(OBJDIR)/cgns_mod.o \
        $(OBJDIR)/parallel.o \
        $(OBJDIR)/quadrature_mod.o \
@@ -270,6 +269,7 @@ $(OBJDIR)/io.o : io.f90 \
        $(FUNDIR)/bc_string_to_integer.f90 \
        $(FUNDIR)/cgns_write_field_parallel.f90 \
        $(SRCDIR)/mpi_defs.h
+       # $(OBJDIR)/plot3d_mod.o \
 
 $(OBJDIR)/kind_types.o : kind_types.f90 \
                $(FUNDIR)/all_are_equal.f90 \
@@ -362,21 +362,21 @@ $(OBJDIR)/parallel.o : parallel.f90 \
              $(OBJDIR)/connectivity.o \
              $(OBJDIR)/gmsh_mod.o \
              $(OBJDIR)/cgns_mod.o \
-             $(OBJDIR)/plot3d_mod.o \
              $(FUNDIR)/cell_solpts.f90 \
              $(FUNDIR)/last.f90 \
              $(SRCDIR)/mpi_defs.h
+             # $(OBJDIR)/plot3d_mod.o \
 
 $(OBJDIR)/pbs_mod.o : pbs_mod.f90 \
             $(OBJDIR)/kind_types.o
 
-$(OBJDIR)/plot3d_mod.o : plot3d_mod.f90 \
-               $(OBJDIR)/kind_types.o \
-               $(OBJDIR)/geovar_mod.o \
-               $(OBJDIR)/ovar_mod.o \
-               $(OBJDIR)/order_mod.o \
-               $(FUNDIR)/bc_string_to_integer.f90 \
-               $(FUNDIR)/last.f90
+# $(OBJDIR)/plot3d_mod.o : plot3d_mod.f90 \
+#                $(OBJDIR)/kind_types.o \
+#                $(OBJDIR)/geovar_mod.o \
+#                $(OBJDIR)/ovar_mod.o \
+#                $(OBJDIR)/order_mod.o \
+#                $(FUNDIR)/bc_string_to_integer.f90 \
+#                $(FUNDIR)/last.f90
 
 $(OBJDIR)/poly.o : poly.f90 \
          $(OBJDIR)/kind_types.o

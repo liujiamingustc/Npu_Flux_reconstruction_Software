@@ -1520,7 +1520,7 @@ subroutine create_bc_in
   !
   !.. Use Statements ..
   use geovar, only : nr,bface
-  use ovar,   only : bc_input,bc_in,bc_names
+  use ovar,   only : bc_input,bc_in
   use ovar,   only : tmin,tmax,tref,pref,rgasref
   use ovar,   only : velref,rhoref,aref,gam
   use ovar,   only : in_prof_mat_list
@@ -1559,8 +1559,8 @@ continue
   !
   ! Find any boundary conditions that were set in the
   ! input namelist file using the bc_input array
-  ! The number of BC in bc_input should be the same as the size of bc_names
-  ! in ovar module. bc_names is updated during reading the grid file and the
+  ! The number of BC in bc_input should be the same as the size of bc_in
+  ! in ovar module. bc_in is updated during reading the grid file and the
   ! number of BC is from the grid file. While bc_input is from the *.in
   ! configuration file, in which the user may not supply the same number of BC.
   ! That is a conflict I think. Though for verification cases like couette
@@ -1570,11 +1570,11 @@ continue
   ! can still achieve the same residual with the inflow and outflow being set
   ! to UNKNOWN.
   !
-  ! First check if bc_input and bc_names are matching each other.
-  if ( len_trim( bc_input(size(bc_names))%name ) == 0 ) then
+  ! First check if bc_input and bc_in are matching each other.
+  if ( len_trim( bc_input(size(bc_in))%name ) == 0 ) then
     ! They mismatch each other. bc_input does not get enough BCs.
     call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-      'bc_input mismatches bc_names!')
+      'bc_input mismatches the size of bc_in!')
   end if
   !
   do n = 1,size(bc_input)
@@ -1830,7 +1830,7 @@ continue
       !
       if (any(bface(1,nf) == bc_comm) .or. bface(5,nf) == 0) cycle bface_loop
       !
-      bcnam = trim(adjustl( uppercase( bc_names(bface(5,nf)) ) ))
+      bcnam = trim(adjustl( uppercase( bc_in(bface(5,nf))%bc_name ) ))
       bcinp = trim(adjustl( uppercase( bc_input(n)%name      ) ))
       !
       if (bcnam == bcinp) then

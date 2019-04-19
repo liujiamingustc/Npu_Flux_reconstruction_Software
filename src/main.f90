@@ -1065,7 +1065,7 @@ subroutine report_memory_usage(n,request_stop)
   use parallel_mod,      only : parallel_memory_usage
   use module_limiters,   only : limiters_memory_usage
   use bnd_profiles_mod,  only : bnd_profiles_memory_usage
-  use module_plot3d,     only : plot3d_memory_usage
+  ! use module_plot3d,     only : plot3d_memory_usage
   use module_gmsh,       only : gmsh_memory_usage
   use module_cgns,       only : cgns_memory_usage
   !
@@ -1125,7 +1125,7 @@ continue
   call ovar_memory_usage(i)
   call limiters_memory_usage(i)
   call generic_memory_usage(i)
-  call plot3d_memory_usage(i)
+  ! call plot3d_memory_usage(i)
   call bnd_profiles_memory_usage(i)
   call gmsh_memory_usage(i)
   call metrics_memory_usage(i)

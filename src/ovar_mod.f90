@@ -32,6 +32,10 @@ module ovar
   ! ###  Module Derived Types  ###
   ! ##############################
   !
+  !============================================================================
+  !
+  ! BC related data
+  !============================================================================
   type, public :: relaxation_t
     real(wp) :: value = one
     real(wp) :: time  = zero
@@ -92,12 +96,12 @@ module ovar
     type(relaxation_t) :: relax
     integer :: bc_input_idx
     integer :: bc_type = bc_unknown
+    character(len=32) :: bc_name = ''
   end type bc_in_t
   !
   type(bc_in_t), public, save, allocatable :: bc_in(:)
   !
-  character(len=32), public, save, allocatable :: bc_names(:)
-  !
+  !============================================================================
   ! ################################
   ! ###  Module Local Variables  ###
   ! ################################

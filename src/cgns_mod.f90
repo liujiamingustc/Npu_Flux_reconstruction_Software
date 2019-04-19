@@ -1740,7 +1740,9 @@ subroutine create_solver_geom_arrays_cgns
   use geovar,    only : nodes_of_cell_ptr,nodes_of_cell
   use geovar,    only : xyz_nodes
   use geovar,    only : grid
-  use ovar,      only : bc_names
+  use ovar,      only : bc_in
+  ! TODO: create a general subroutine to check if the passed in parameter like
+  ! bc_in is already allocated. Only in debug mode.
   !
   !.. Local Scalars ..
   integer :: n,n1,n2,ifa,nf,h1,h2,i,j,ie
@@ -2351,9 +2353,10 @@ continue
 #ifdef DEBUG_ON
   write (iout,110) pname
 #endif
-  !
-  allocate ( bc_names(1:size(bnd_grps)) , stat=ierr , errmsg=error_message )
-  call alloc_error(pname,"bc_names",1,__LINE__,__FILE__,ierr,error_message)
+  ! TODO: Why is bc_names allocated 2 times?
+  ! Check another TODO
+  ! allocate ( bc_names(1:size(bnd_grps)) , stat=ierr , errmsg=error_message )
+  ! call alloc_error(pname,"bc_names",1,__LINE__,__FILE__,ierr,error_message)
   !
   ! Create and fill out bface with data from the
   ! ZoneBC_t node of the CGNS grid file
@@ -2372,7 +2375,7 @@ continue
     !
     np = bnd_grps(i)
     !
-    bc_names(i) = trim(adjustl(cell_grps(np)%name))
+    bc_in(i)%bc_name = trim(adjustl(cell_grps(np)%name))
     !
     current_cell_grp: do j = 1,size(cell_grps(np)%cells)
       !
@@ -4230,7 +4233,7 @@ subroutine broadcast_solver_geom_arrays
   use geovar,    only : nr,ncell,nnode,nfbnd,nbfai,bface
   use geovar,    only : nodes_of_cell_ptr,nodes_of_cell
   use geovar,    only : cell_geom,cell_order,xyz_nodes
-  use ovar,      only : loc_solution_pts,loc_flux_pts,bc_names
+  use ovar,      only : loc_solution_pts,loc_flux_pts,bc_in
   !
   !.. Local Scalars ..
   integer :: n,nocsz,ierr,nbcnm
@@ -4250,7 +4253,7 @@ continue
   !
   if (mypnum == glb_root) then
     grid_size(:) = [ nr , nnode , ncell , nfbnd , &
-                     size(nodes_of_cell) , size(bc_names) ]
+                     size(nodes_of_cell) , size(bc_in) ]
   end if
   !
   call mpi_bcast(grid_size,size(grid_size,kind=int_mpi),mpi_inttyp, &
@@ -4285,9 +4288,10 @@ continue
     allocate ( xyz_nodes(1:nr,1:nnode) , source=zero , &
                stat=ierr , errmsg=error_message )
     call alloc_error(pname,"xyz_nodes",1,__LINE__,__FILE__,ierr,error_message)
-    !
-    allocate ( bc_names(1:nbcnm) , stat=ierr , errmsg=error_message )
-    call alloc_error(pname,"bc_names",1,__LINE__,__FILE__,ierr,error_message)
+    ! TODO: why is bc_names allocated 2 times in this module?
+    ! Check another TODO
+    ! allocate ( bc_names(1:nbcnm) , stat=ierr , errmsg=error_message )
+    ! call alloc_error(pname,"bc_names",1,__LINE__,__FILE__,ierr,error_message)
     !
   end if
   !
@@ -4328,8 +4332,9 @@ continue
   call alloc_error(pname,"cell_order",1,__LINE__,__FILE__,ierr,error_message)
   !
   do n = 1,nbcnm
-    isz = len(bc_names(n),kind=int_mpi)
-    call mpi_bcast(bc_names(n),isz,MPI_CHARACTER,glb_root,MPI_COMM_WORLD,mpierr)
+    ! TODO: Why is the type of char of bc_name set to be int_mpi?
+    isz = len(bc_in(n)%bc_name,kind=int_mpi)
+    call mpi_bcast(bc_in(n)%bc_name,isz,MPI_CHARACTER,glb_root,MPI_COMM_WORLD,mpierr)
   end do
   !
   ! Make sure that Lobatto nodes are requested if the grid contains triangle
@@ -7271,7 +7276,10 @@ continue
 end subroutine cgns_memory_usage
 !
 !###############################################################################
-!
+! TODO: Why put debug_timer in the cgns module? It should be a genenral
+! subroutine.
+! TODO: debug_timer subroutine exists in multiple files. Unify them into
+! a single one. Their definitions are a little bit different.
 subroutine debug_timer(time_flag,message,processor,part_num,acc)
   !
   !.. Formal Arguments ..

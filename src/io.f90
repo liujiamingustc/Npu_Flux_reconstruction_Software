@@ -1262,7 +1262,7 @@ subroutine read_grid_file()
   use geovar,         only : grid
   use module_cgns,    only : read_cgns_gridfile
   use module_gmsh,    only : read_gmsh_gridfile
-  use module_plot3d,  only : read_plot3d_gridfile
+  ! use module_plot3d,  only : read_plot3d_gridfile
   use quadrature_mod, only : find_valid_geometries
   use ovar,           only : use_bc_conflicts
   use ovar,           only : itestcase,VortexGrid_DOF
@@ -1318,7 +1318,7 @@ continue
     ! GMSH format. 2019-04-19, 13:43:54. Jingchang Shi
     call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
       'PLOT3D grid format is not supported for now!')
-    call read_plot3d_gridfile( gridfile , plot3d_cutfile , plot3d_bcsfile )
+    ! call read_plot3d_gridfile( gridfile , plot3d_cutfile , plot3d_bcsfile )
   end if
   !
   if (.not. allocated(grid)) then
