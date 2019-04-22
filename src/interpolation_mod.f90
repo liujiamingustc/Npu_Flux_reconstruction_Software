@@ -1639,6 +1639,7 @@ continue
       !
       ! Not sure about triangles here so just use the identity matrix
       !
+      call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, "Geom_Tria not ready!")
       return_value(:,:) = identity_matrix( return_value )
       !
     case (Geom_Quad)
@@ -1653,18 +1654,21 @@ continue
       !
       ! Not sure about tetrahedra here so just use the identity matrix
       !
+      call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, "Geom_Tetr not ready!")
       return_value(:,:) = identity_matrix( return_value )
       !
     case (Geom_Pyra)
       !
       ! Not sure about pyramids here so just use the identity matrix
       !
+      call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, "Geom_Pyra not ready!")
       return_value(:,:) = identity_matrix( return_value )
       !
     case (Geom_Pris)
       !
       ! Not sure about prisms here so just use the identity matrix
       !
+      call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, "Geom_Pris not ready!")
       return_value(:,:) = identity_matrix( return_value )
       !
     case (Geom_Hexa)
@@ -1837,19 +1841,20 @@ pure function InterpToCell_Edge(xi,xi_interp) result(return_value)
   real(wp), dimension(:), intent(in) :: xi_interp
   !
   !.. Function Return Value ..
-  real(wp), dimension(1:size(xi),1:size(xi)) :: return_value
+  real(wp), dimension(1:size(xi_interp),1:size(xi)) :: return_value
   !
   !.. Local Scalars ..
-  integer :: i,j,npts
+  integer :: i,j,npts,npts_interp
   !
   !.. Local Arrays ..
   real(qp), dimension(1:size(xi)) :: xi_qp
-  real(qp), dimension(1:size(xi)) :: pts_qp
-  real(qp), dimension(1:size(xi),1:size(xi)) :: interp_mat_qp
+  real(qp), dimension(1:size(xi_interp)) :: xi_interp_qp
+  real(qp), dimension(1:size(xi_interp),1:size(xi)) :: interp_mat_qp
   !
 continue
   !
   npts = size(xi)
+  npts_interp = size(xi_interp)
   !
   ! Create a quad precision copy of the array giving the solution points
   !
@@ -1857,13 +1862,13 @@ continue
   !
   ! Create a quad precision copy of the array giving the interpolation points
   !
-  pts_qp = real( xi_interp , kind=qp )
+  xi_interp_qp = real( xi_interp , kind=qp )
   !
   ! Evaluate the Lagrange polynomial at each interpolation point
   !
   do j = 1,npts
-    do i = 1,npts
-      interp_mat_qp(i,j) = eval_LagrangePoly([j],[pts_qp(i)],xi_qp)
+    do i = 1,npts_interp
+      interp_mat_qp(i,j) = eval_LagrangePoly([j],[xi_interp_qp(i)],xi_qp)
     end do
   end do
   !

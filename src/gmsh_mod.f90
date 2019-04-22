@@ -1832,6 +1832,8 @@ continue
  !end do
   !
   ! Allocate the bface array
+  ! source=0 let bface(6,:)'s default value be 0. That means bc_in(0,:)
+  ! provides the flow condition for this BC.
   !
   allocate ( bface(1:nbfai,1:nfbnd) , source=0 , &
              stat=ierr , errmsg=error_message )
@@ -1890,7 +1892,8 @@ continue
         ! Mark each host cell node that is on the boundary
         !
         do n = 1,size(grid%elem(bnd_cell)%nodes)
-          where (int_nodes(1:ncnods) == grid%elem(bnd_cell)%nodes(n)) marker = 1
+          where (int_nodes(1:ncnods) == grid%elem(bnd_cell)%nodes(n)) &
+              marker(1:ncnods) = 1
         end do
         !
         ! Loop over the number of faces for this geometry type and find which

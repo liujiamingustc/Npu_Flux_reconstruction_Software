@@ -1571,11 +1571,11 @@ continue
   ! to UNKNOWN.
   !
   ! First check if bc_input and bc_in are matching each other.
-  if ( len_trim( bc_input(size(bc_in))%name ) == 0 ) then
-    ! They mismatch each other. bc_input does not get enough BCs.
-    call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-      'bc_input mismatches the size of bc_in!')
-  end if
+  ! if ( len_trim( bc_input(size(bc_in))%name ) == 0 ) then
+  !   ! They mismatch each other. bc_input does not get enough BCs.
+  !   call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
+  !     'bc_input mismatches the size of bc_in!')
+  ! end if
   !
   do n = 1,size(bc_input)
     !
