@@ -1523,7 +1523,6 @@ subroutine create_bc_in
   use ovar,   only : bc_input,bc_in
   use ovar,   only : tmin,tmax,tref,pref,rgasref
   use ovar,   only : velref,rhoref,aref,gam
-  use ovar,   only : in_prof_mat_list
   !
   !.. Local Scalars ..
   integer     :: i,ii,n,nf,nbc,ierr
@@ -1534,8 +1533,6 @@ subroutine create_bc_in
   logical(lk) :: total_is_set
   logical(lk) :: mach_is_set
   logical(lk) :: vel_is_set
-  integer     :: in_prof_mat_shape(2)
-  real(wp), allocatable :: in_prof_mat(:,:)
   !
   character(len=32) :: bcnam,bcinp
   !
@@ -1557,26 +1554,6 @@ continue
   one_over_gm1 = one / gm1
   gam_over_gm1 = gam*one_over_gm1
   !
-  ! Find any boundary conditions that were set in the
-  ! input namelist file using the bc_input array
-  ! The number of BC in bc_input should be the same as the size of bc_in
-  ! in ovar module. bc_in is updated during reading the grid file and the
-  ! number of BC is from the grid file. While bc_input is from the *.in
-  ! configuration file, in which the user may not supply the same number of BC.
-  ! That is a conflict I think. Though for verification cases like couette
-  ! flow, such mismatch of the number BC is working. Not sure about the
-  ! design philosophy. But for now I plan to change it.
-  ! For Couette flow, such mismatch has no side effects on the results. You
-  ! can still achieve the same residual with the inflow and outflow being set
-  ! to UNKNOWN.
-  !
-  ! First check if bc_input and bc_in are matching each other.
-  ! if ( len_trim( bc_input(size(bc_in))%name ) == 0 ) then
-  !   ! They mismatch each other. bc_input does not get enough BCs.
-  !   call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-  !     'bc_input mismatches the size of bc_in!')
-  ! end if
-  !
   do n = 1,size(bc_input)
     !
     bc_input(n)%name = adjustl(bc_input(n)%name)
@@ -1588,31 +1565,6 @@ continue
       else
         bc_list = [ bc_list , n ] ! Using F2003 auto-reallocation
       end if
-    end if
-    !
-    bc_input(n)%in_prof_file = adjustl(bc_input(n)%in_prof_file)
-    !
-    if (len_trim(bc_input(n)%in_prof_file) > 0) then
-      !
-      ! Read the associated input profile in this BC
-      call read_in_matrix(bc_input(n)%in_prof_file, in_prof_mat, &
-                          bc_input(n)%in_prof_file_delimiter, in_prof_mat_shape)
-      !
-      ! Copy the input matrix to a shrinked-size matrix which is globally
-      ! accessible.
-      ! NOTE: in_prof_mat_list(n)%mat set each record from the data file to
-      ! its column.
-      allocate( &
-        in_prof_mat_list(n)%mat(1:in_prof_mat_shape(1),1:in_prof_mat_shape(2)),&
-        source=in_prof_mat(1:in_prof_mat_shape(1),1:in_prof_mat_shape(2)), &
-        stat=ierr, errmsg=error_message)
-      call alloc_error(pname,"in_prof_mat_list(n)%mat",1,__LINE__,__FILE__, &
-        ierr,error_message)
-      !
-      deallocate ( in_prof_mat, stat=ierr , errmsg=error_message )
-      call alloc_error(pname,"in_prof_mat",2,__LINE__,__FILE__, &
-        ierr,error_message)
-      !
     end if
     !
   end do
@@ -2660,133 +2612,6 @@ continue
             " negative value so it is explicitly computed.")
   !
 end subroutine igl
-!
-subroutine read_in_matrix(in_fpath,mat,delim_char,mat_shape)
-  !
-  ! Use Statements
-  !
-  ! Formal Arguments
-  character(len=*), intent(in) :: in_fpath
-  real(wp), allocatable, intent(out) :: mat(:,:)
-  character, intent(in) :: delim_char
-  integer, intent(out) :: mat_shape(2)
-  !
-  ! Local Scalars
-  integer  :: ierr,inpt
-  integer  :: n_com_line,i_line
-  integer  :: i_delim,n_delim,n_char_in_text,col_count
-  integer  :: i_row
-  logical(ldk) :: file_exists
-  character(len=80) :: text ! Requires max col be 80 in the in file.
-  character :: leading_char
-  !
-  !.. Local Parameters ..
-  character(len=*), parameter :: pname = "read_in_matrix"
-  ! 10000 rows should be sufficient for the most cases
-  integer, parameter :: max_n_row = 10000
-  !
-continue
-  !
-  call debug_timer(entering_procedure,pname)
-  !
-  ! Inquire whether the input file name exists
-  inquire (file=in_fpath,exist=file_exists)
-  !
-  if (file_exists) then
-    !
-    ! Try opening the input file name
-    open (newunit=inpt,file=in_fpath,status="old",action="read", &
-                       form="formatted",iostat=ierr,iomsg=error_message)
-    call io_error(pname,in_fpath,1,__LINE__,__FILE__,ierr,error_message)
-    !
-    ! First skip the comment lines starting with !
-    n_com_line = -1
-    leading_char = '!'
-    do while ( leading_char == '!' )
-      read (inpt,*,iostat=ierr,err=100,end=101) leading_char
-      n_com_line = n_com_line + 1
-    end do
-    ! Go back to the starting line of the data section.
-    rewind (inpt,iostat=ierr,err=100)
-    if ( n_com_line > 0 ) then
-      ! Comment lines are found. Therefore we have to skip comment lines.
-      do i_line = 1, n_com_line
-        read (inpt,'(A)',iostat=ierr,err=100,end=101) text
-      end do
-    end if
-    !
-    ! Read the first line of the data section to check the dimension of data
-    read (inpt,'(A)',iostat=ierr,err=100,end=101) text
-    text = trim(adjustl(text))
-    n_char_in_text = len_trim(text)
-    n_delim = 1
-    i_delim = 1
-    col_count = 0
-    do while(n_delim < n_char_in_text .and. i_delim > 0)
-      i_delim = index (text(n_delim:),delim_char)
-      n_delim = n_delim + i_delim
-      if ( len_trim(text(n_delim-1:)) > 0 ) then
-        ! Accumulate the count only when there is data colum remaining.
-        ! The data column includes the possible ending delimiter.
-        col_count = col_count + 1
-      end if
-    end do
-    !
-    ! Go back to the starting line of the data section
-    rewind (inpt,iostat=ierr,err=100)
-    if ( n_com_line > 0 ) then
-      ! Comment lines are found. Therefore we have to skip comment lines.
-      do i_line = 1, n_com_line
-        read (inpt,'(A)',iostat=ierr,err=100,end=101) text
-      end do
-    end if
-    !
-    ! Allocate the matrix
-    allocate(mat(1:col_count, 1:max_n_row), source=zero, stat=ierr, &
-      errmsg=error_message)
-    call alloc_error(pname,"mat",1,__LINE__,__FILE__,ierr,error_message)
-    !
-    ! Now read in the data section
-    ! NOTE: if you allocate mat with the shape (max_n_row, col_count), the
-    ! read statement will raise the error 5008, probably meaning read past
-    ! EOF. A StackOverflow link gives possible explanations. The link is
-    ! https://stackoverflow.com/questions/49070617/fortran-is-reading-beyond-
-    ! endfile-record.
-    ! You have to assign an array from the data file in the column major to
-    ! a column in the 2D array.
-    ierr=0
-    i_row=0
-    do while (ierr==0)
-      i_row = i_row + 1
-      read (inpt,*,iostat=ierr,err=100) mat(:,i_row)
-    end do
-    mat_shape(1) = col_count
-    mat_shape(2) = i_row-1
-    !
-    ! Close the input file now that we are finished reading it
-    close (inpt,iostat=ierr,iomsg=error_message)
-    call io_error(pname,in_fpath,2,__LINE__,__FILE__,ierr,error_message)
-    !
-  else
-    !
-    call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-      in_fpath//' does not exist!')
-    !
-  end if
-  !
-  call debug_timer(leaving_procedure,pname)
-  !
-  return
-  !
-  ! Format Statements
-  !
-  ! Read error continuation statements
-  100 call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-    'Error occurs when reading!')
-  101 call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-    'READ should not reach EOF!')
-  !
-end subroutine read_in_matrix
 !
 !###############################################################################
 !

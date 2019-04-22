@@ -653,10 +653,6 @@ continue
         request_restart_interupt = request_array(5)
         request_time_ave = request_array(6)
         !
-        ! Exit if the STOP_GFR file was found
-        !
-        if (request_stop) exit main_loop
-        !
         ! If a restart dump was requested, write a restart file
         !
         if (request_restart) then
@@ -674,6 +670,11 @@ continue
           end if
           CGNS_action = reopen_CGNS
         end if
+        !
+        ! Exit if the STOP_GFR file was found.
+        ! Before stop gfr, the solution files should be first dumped out.
+        !
+        if (request_stop) exit main_loop
         !
         if (request_cfl_adjustment) then
           !

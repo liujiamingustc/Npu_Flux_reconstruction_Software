@@ -64,9 +64,6 @@ module ovar
     !
     type(relaxation_t) :: relax
     !
-    character(len=256) :: in_prof_file = ""
-    character :: in_prof_file_delimiter = ","
-    !
   contains
     !
     procedure :: has_default_flow_conditions
@@ -79,15 +76,20 @@ module ovar
   ! Set up by the input conf file by NML.
   type(bc_input_t), public, save :: bc_input(1:bc_input_size)
   !
-  ! Matrix stores the matrix of the input profile
-  type, public :: in_prof_mat_t
-    !
-    real(wp), allocatable :: mat(:,:)
-    !
-  end type in_prof_mat_t
+  !===BEGIN===!
+  ! ! Matrix stores the matrix of the input profile
+  ! type, public :: in_prof_mat_t
+  !   !
+  !   real(wp), allocatable :: mat(:,:)
+  !   !
+  ! end type in_prof_mat_t
+  !===END===!
+  !
+  character(len=256), public :: in_prof_file = ""
+  character, public :: in_prof_file_delimiter = ","
   !
   ! The number of input profile matrix is the same as the size of bc_input.
-  type(in_prof_mat_t), public, save :: in_prof_mat_list(1:bc_input_size)
+  real(wp), public, save, allocatable :: in_prof_mat(:,:)
   !
   type, public :: bc_in_t
     real(wp), allocatable :: cv(:)
@@ -651,6 +653,7 @@ module input_namelist_mod
   use ovar,      only : convert_restart_to_cgns, completely_disable_cgns
   use ovar,      only : lustre_stripe_count, lustre_stripe_size
   use ovar,      only : bc_input!,bc_input_t
+  use ovar,      only : in_prof_file,in_prof_file_delimiter
   use ovar,      only : output_time_averaging, time_ave_file
   use ovar,      only : time_ave_vel_is_axisymm
   use ovar,      only : time_scaling_factor
@@ -782,6 +785,8 @@ module input_namelist_mod
   namelist / input / output_bface_array
   ! INPUT BOUNDARY CONDITIONS
   namelist / input / bc_input
+  ! INPUT PROFILE
+  namelist / input / in_prof_file,in_prof_file_delimiter
   !
   ! CFL ADJUSTMENT NAMELIST
   !
