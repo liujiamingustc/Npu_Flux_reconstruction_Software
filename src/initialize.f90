@@ -36,6 +36,7 @@ subroutine initialize_flow()
   use ovar, only : pref_nd,velref_nd,muref_nd
   use ovar, only : rgasref_nd,cpref_nd
   use ovar, only : adjust_cfl_cycles
+  use ovar, only : grid_format
  !use ovar, only : output_time_averaging
   !
   use flowvar, only : usp,uoldsp
@@ -150,16 +151,20 @@ continue
       n1 = cell(n)%beg_sp
       n2 = cell(n)%end_sp
       np = n2-n1+1
-      !===BEGIN===!
-      ! Each grid elem has tags. Probabaly tags(2) indicates which no. BC should
+      !
+      ! Each grid elem has tags. tags(2) indicates which no. BC should
       ! be the refenrece BC for the initialization.
-      !===END===!
       init_cond = 0
-      if (allocated(grid)) then
-        if (allocated(grid%elem)) then
-          if (allocated(grid%elem(n)%tags)) then
-            if (size(grid%elem(n)%tags) >= 2) then
-              init_cond = grid%elem(n)%tags(2)
+      !
+      ! Only if the grid format is not Gmsh, use tags(2). For now, init all
+      ! cells from Gmsh to bc_in(0).
+      if ( grid_format /= Gmsh_Format ) then
+        if (allocated(grid)) then
+          if (allocated(grid%elem)) then
+            if (allocated(grid%elem(n)%tags)) then
+              if (size(grid%elem(n)%tags) >= 2) then
+                init_cond = grid%elem(n)%tags(2)
+              end if
             end if
           end if
         end if
@@ -775,6 +780,9 @@ continue
       if (size(grid%elem(n)%tags) < 2) then
         grid%elem(n)%tags = [grid%elem(n)%tags(1),init] ! F2003 AUTO-REALLOC
       else
+        ! For Gmsh format grid, tags(2) is the element entity ID.
+        ! Currently, ignore the element ID. Treat them all as 0.
+        ! 2019-04-23, 09:45:46. Jingchang Shi.
         grid%elem(n)%tags(2) = init
       end if
       !
@@ -1523,6 +1531,7 @@ subroutine create_bc_in
   use ovar,   only : bc_input,bc_in
   use ovar,   only : tmin,tmax,tref,pref,rgasref
   use ovar,   only : velref,rhoref,aref,gam
+  use ovar,   only : grid_format
   !
   !.. Local Scalars ..
   integer     :: i,ii,n,nf,nbc,ierr
@@ -1540,6 +1549,7 @@ subroutine create_bc_in
   real(wp) :: vel(1:nr)
   real(wp) :: pv(1:nq)
   real(wp) :: cv(1:nq)
+  character(len=256) :: msgfmt
   !
   !.. Local Allocatable Arrays ..
   integer, allocatable :: bc_list(:)
@@ -1572,8 +1582,38 @@ continue
   nbc = 0
   if (allocated(bc_list)) nbc = size(bc_list)
   !
-  ! bc_in should be allocated in the grid reading process.
-  ! Error check here.
+  ! nbc is the number of BC specified in the input file.
+  ! bface(1,:) contains all BCs specified in the gmsh file.
+  ! If BCs are specified in the input file, nbc should match the number of BCs
+  ! in bface(1,:).
+  if ( grid_format == Gmsh_Format ) then
+    !
+    ! Only check when the input file provides BCs. This means that if you
+    ! provide BCs in the input file, do provide all BCs. Providing just one
+    ! of all BCs is prohibited.
+    if ( nbc > 0 ) then
+      !
+      i = maxval(bface(1,:)) - minval(bface(1,:)) + 1
+      !
+      ! Check if the BC ID is consecutive.
+      do ii = minval(bface(1,:)), maxval(bface(1,:))
+        if ( all(bface(1,:) /= ii) ) then
+          i = i - 1
+        end if
+      end do
+      !
+      ! bc_input has different number of BCs from bface(1,:)
+      if ( nbc < i ) then
+        write(error_message,7) i,nbc
+        call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,error_message)
+      end if
+      !
+    end if
+    !
+  end if
+  !
+  ! bc_in should be allocated in the plot3d grid reading process. However, for
+  ! gmsh format, bc_in is allocated here.
   if( .not. allocated(bc_in) ) then
     allocate ( bc_in(0:nbc) , stat=ierr , errmsg=error_message )
     call alloc_error(pname,"bc_in",1,__LINE__,__FILE__,ierr,error_message)
@@ -1598,13 +1638,27 @@ continue
   !
   ! Set the other boundary conditions
   !
-  do i = 1,nbc
+  nbc_loop: do i = 1,nbc
     !
     n = bc_list(i)
     !
     ! Save the index within bc_input for this bc_in
     !
     bc_in(i)%bc_input_idx = n
+    !
+    ! Sync bc_in with bc_input in terms of bc_name and bc_type.
+    if ( grid_format == Gmsh_Format ) then
+      !
+      ! Check if bc_type_string is provided in bc_input.
+      if ( len_trim(adjustl(bc_input(i)%bc_type_string)) == 0 ) then
+        call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
+          "For GMSH, bc_type_string must be specified for bc_input(i)!")
+      end if
+      !
+      bc_in(i)%bc_type = bc_string_to_integer(bc_input(i)%bc_type_string)
+      bc_in(i)%bc_name = bc_input(i)%name
+      !
+    end if
     !
     if ( bc_input(n)%has_default_flow_conditions() ) then
       !
@@ -1777,6 +1831,7 @@ continue
       !
     end if
     !
+    ! Update bface(1,nf) and bface(6,nf) according to bc_input
     ii = 0
     bface_loop: do nf = 1,size(bface,dim=2)
       !
@@ -1811,7 +1866,7 @@ continue
       write (iout,6) ii
     end if
     !
-  end do
+  end do nbc_loop
   !
   if (ncpu > 1) then
     if (mypnum == glb_root) flush (iout)
@@ -1840,6 +1895,8 @@ continue
             4x,"Viscosity             = ",es14.6," kg/(m*s)",/, &
             4x,"Reynolds #            = ",es14.6,/)
   6 format (4x,"Number of boundary faces for this BC = ",i0)
+  7 format ("GMSH file provides ",i0," BCs while the input file gives ",i0,&
+            " BCs")
   !
 end subroutine create_bc_in
 !
@@ -2623,6 +2680,7 @@ include "Functions/viscosity.f90"
 include "Functions/temperature.f90"
 include "Functions/smc000_interior_wall_radius.f90"
 include "Functions/arn2_interior_wall_radius.f90"
+include "Functions/bc_string_to_integer.f90"
 !
 !###############################################################################
 !

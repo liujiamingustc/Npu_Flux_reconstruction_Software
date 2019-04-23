@@ -275,8 +275,6 @@ subroutine read_nml_input_file(input_fname)
   !
   use restart_mod, only : check_restart_dir
   !
-  ! use module_kind_types, only : reallocate
-  !
   !.. Formal Arguments ..
   character(len=*), intent(in) :: input_fname
   !

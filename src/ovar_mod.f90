@@ -64,6 +64,8 @@ module ovar
     !
     type(relaxation_t) :: relax
     !
+    character(len=64) :: bc_type_string = ""
+    !
   contains
     !
     procedure :: has_default_flow_conditions
