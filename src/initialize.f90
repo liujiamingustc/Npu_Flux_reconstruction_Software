@@ -1317,8 +1317,26 @@ continue
     ! Set up the base reference conditions based
     ! on the input flow reference conditions
     !
-    ! Check the reference conditions for consistency
+    ! First check if machref is specified.
+    if ( machref < zero ) then
+      call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,"machref is not given!")
+    end if
     !
+    ! Check the reference conditions for consistency.
+    ! It is required to provide 2 thermal variables.
+    if ( ptotref > zero .and. ttotref > zero ) then
+      !
+      ! The total conditions of P and T are spcified. We need to calc pref,
+      ! tref based on the total conditions with the help of Mach ref value.
+      total_cond = one + half*(gam-one)*machref*machref
+      tref = ttotref / total_cond
+      gam_over_gm1 = gam / (gam-one)
+      pref = ptotref / (total_cond**gam_over_gm1)
+      ptot2p_ratio = ptotref/pref
+    end if
+    !
+    ! Total conditions of P and T are not specified. Thus check the static
+    ! conditions of P and T, Rho.
     if (rhoref < zero) then
       rhoref = pref/(rgasref*tref)
     else if (pref < zero) then

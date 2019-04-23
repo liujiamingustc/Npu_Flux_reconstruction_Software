@@ -208,7 +208,7 @@ module ovar
   integer, public, save :: turbulence_model    = laminar_flow
   !
   ! NONDIMENSIONAL REFERENCE CONDITIONS
-  real(wp), public, save :: machref =  0.4_wp
+  real(wp), public, save :: machref = -1.0_wp
   real(wp), public, save :: reyref  = -1.0_wp
   ! reyref default evaluates to 8.7319053606e+6
   real(wp), public, save :: gam     =  1.4_wp
