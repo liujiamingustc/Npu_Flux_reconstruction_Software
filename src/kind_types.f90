@@ -373,6 +373,8 @@ module module_kind_types
   real(wp), parameter :: eps17 = 1.0e-17_wp
   real(wp), parameter :: small = eps17
   !
+  real(wp), parameter :: ten12 = 1.0e+12_wp
+  !
   real(wp), parameter :: pi = 3.14159265358979323846_wp
   !
   real(wp), parameter :: radians2degrees = two*nine*ten/pi

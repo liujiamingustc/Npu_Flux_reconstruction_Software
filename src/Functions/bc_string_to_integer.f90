@@ -112,9 +112,9 @@ continue
       return_value = bc_slip_wall
     case ("EWALL","EULER","EULERWALL")
       return_value = bc_euler_wall
-    case ("AWALL","ADIABATIC","WALLVISCOUSHEATFLUX")
+    case ("AWALL","ADIABATIC","WALLVISCOUSHEATFLUX","ADIABATICWALL")
       return_value = bc_adiabatic_wall
-    case ("IWALL","ISOTHERMAL","WALLVISCOUSISOTHERMAL")
+    case ("IWALL","ISOTHERMAL","WALLVISCOUSISOTHERMAL","ISOTHERMALWALL")
       return_value = bc_isothermal_wall
       !
     case ("SYMM","SYMMETRY","SYMMETRYPLANE")

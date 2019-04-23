@@ -156,9 +156,15 @@ continue
       ! be the refenrece BC for the initialization.
       init_cond = 0
       !
-      ! Only if the grid format is not Gmsh, use tags(2). For now, init all
-      ! cells from Gmsh to bc_in(0).
+      ! For GMSH, all cells including the boundary faces using tags(2)=0 is
+      ! not feasible. Because even the noslip wall uses bc_in(bc_idx) to get
+      ! the flow condition at the wall, i.e. Ux=0. That is apparently not the
+      ! reference condition.
+      ! Here we need to process tags(2) to give a correct value of init_cond
+      ! while keeping tags(2) being the original value from GMSH grid.
       if ( grid_format /= Gmsh_Format ) then
+        !
+        ! For grids like PLOT3D
         if (allocated(grid)) then
           if (allocated(grid%elem)) then
             if (allocated(grid%elem(n)%tags)) then
@@ -168,6 +174,45 @@ continue
             end if
           end if
         end if
+        !
+      else
+        !
+        ! The meaning of tags(2) depends on the dimension. So first check the
+        ! dimension of this cell. NOTE: Cells in this code include the boundary
+        ! faces, not only the interior cells.
+        if ( nr == 2 ) then
+          !
+          if ( any(grid%elem(n)%prop%geom == Geom_2D) ) then
+            !
+            ! In 2D simulation, if the geom of this cell is 2D type, this cell
+            ! is an interior cell. Thus we use the reference solution to init
+            ! it.
+            init_cond = 0
+            !
+          else if ( any(grid%elem(n)%prop%geom == Geom_1D) ) then
+            !
+            ! In 2D simulation, if the geom of this cell is 1D type, this cell
+            ! is actually a boundary face (edge). In GMSH, tags(2) is the
+            ! element ID. In this code, originally tags(2) is used to specify
+            ! the idx of bc_in to provide the flow condition for the
+            ! corresponding  BC. Here we use tags(1) to set init_cond.
+            ! This means that we are using the physical group ID in GMSH as
+            ! the idx of bc_in to provide the flow condition.
+            init_cond = grid%elem(n)%tags(1)
+            !
+          else
+            !
+            write(error_message,101) n
+            call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,error_message)
+            !
+          end if
+          !
+        else if ( nr == 3 ) then
+          !
+          call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,&
+            "3D not ready!")
+        end if
+        !
       end if
       !
       ! Check whether the init component of outerp is associated with
@@ -388,6 +433,7 @@ continue
              " Gamma            = ",es14.6,/, &
              " Gas Constant     = ",es14.6,/)
   !
+  101 format ("grid%elem(",i0,") has an invalid geom type!")
 end subroutine initialize_flow
 !
 !###############################################################################
@@ -1650,14 +1696,18 @@ continue
     if ( grid_format == Gmsh_Format ) then
       !
       ! Check if bc_type_string is provided in bc_input.
-      if ( len_trim(adjustl(bc_input(i)%bc_type_string)) == 0 ) then
+      if ( len_trim(adjustl(bc_input(n)%bc_type_string)) == 0 ) then
         call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
-          "For GMSH, bc_type_string must be specified for bc_input(i)!")
+          "For GMSH, bc_type_string must be specified for bc_input(n)!")
       end if
       !
-      bc_in(i)%bc_type = bc_string_to_integer(bc_input(i)%bc_type_string)
-      bc_in(i)%bc_name = bc_input(i)%name
+      bc_in(i)%bc_type = bc_string_to_integer(bc_input(n)%bc_type_string)
+      bc_in(i)%bc_name = bc_input(n)%name
       !
+      ! Set VX at the slip wall to be the same as the reference solution.
+      ! if ( bc_in(i)%bc_type ==  ) then
+      !   bc_input(n)%vx =
+      ! end if
     end if
     !
     if ( bc_input(n)%has_default_flow_conditions() ) then
@@ -1689,9 +1739,11 @@ continue
       bc_in(i)%relax%time = max(bc_input(n)%relax%time,zero)
       bc_in(i)%relax%iter = max(bc_input(n)%relax%iter,0)
       !
+      ! Distinguish the adiabatic wall and the isothermal wall.
       if ( (bc_input(n)%wall_temp >= tmin) .and. &
            (bc_input(n)%wall_temp <= tmax) ) then
         !
+        ! Here is the isothermall wall branch.
         bc_in(i)%wall_temperature = bc_input(n)%wall_temp/tref
         !
         if (size(vel) == 1) then
@@ -1712,22 +1764,12 @@ continue
         bc_in(i)%cv = cv(:) ! USING F2003 AUTO-REALLOCATION
         !
       else
-        ! When are we going to get into this branch? When will the specified
-        ! wall temperature is outside of [tmin,tmax] with default values
-        ! being [10,15000]?
         !
-        r = bc_input(n)%rho_static
-        p = bc_input(n)%p_static
-        t = bc_input(n)%t_static
-        !
-        r0 = bc_input(n)%rho_total
-        p0 = bc_input(n)%p_total
-        t0 = bc_input(n)%t_total
-        !
-        mach  = bc_input(n)%mach
-        alpha = bc_input(n)%alpha_aoa
-        beta  = bc_input(n)%beta_aoa
-        !
+        ! Here is the adiabatic wall. We have no idea of the wall temperature.
+        ! And in fact, in the bc_mod.f90, we will not use the thermal vars
+        ! in the wall BC. So just let rho, p, t in the bc_in be the reference
+        ! values.
+        ! First update the velocity compoments
         if (size(vel) == 1) then
           vel(:) = [ bc_input(n)%vx ]
         else if (size(vel) == 2) then
@@ -1736,61 +1778,91 @@ continue
           vel(:) = [ bc_input(n)%vx , bc_input(n)%vy , bc_input(n)%vz ]
         end if
         !
-        iterate_bc_conditions: do ii = 1,5
-          !
-          mach_is_set = ( abs(mach) < five*five .and. mach > zero )
-          vel_is_set  = ( norm2(vel) > zero )
-          !
-          call igl(r,p,t,static_is_set,n)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"igl(r,p,t)")
-          call igl(r0,p0,t0,total_is_set,n)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"igl(r0,p0,t0)")
-          !
-          call mach_total_pres(p,p0,mach,mach_is_set,n)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"mach_total_pres")
-          call mach_total_temp(t,t0,mach,mach_is_set,n)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"mach_total_temp")
-          call mach_total_dens(r,r0,mach,mach_is_set,n)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"mach_total_dens")
-          !
-          call vel_from_static(r,p,t,vel,mach,alpha,beta,vel_is_set,mach_is_set)
-         !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
-         !                        static_is_set,total_is_set, &
-         !                        vel_is_set,mach_is_set,"vel_from_static")
-          !
-          if (static_is_set .and. vel_is_set) exit iterate_bc_conditions
-          !
-          if (ii == 5) then
-            write (error_message,1) n
-            call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,error_message)
-          end if
-          !
-        end do iterate_bc_conditions
-        !
-        pv(nec) = r
         pv(nmb:nme) = vel
-        pv(nee) = p
-        !
-        call check_bc_input(bc_input(n),pv,n)
-        !
-        pv(nec) = pv(nec) / rhoref
         pv(nmb:nme) = pv(nmb:nme) / aref
-        pv(nee) = pv(nee) / rhoa2
         !
         cv(:) = vsp2u_sp(pv)
         !
         bc_in(i)%pv = pv(:) ! Using F2003 auto-reallocation
         bc_in(i)%cv = cv(:) ! Using F2003 auto-reallocation
+        !
+        !===BEGIN===!
+        ! r = bc_input(n)%rho_static
+        ! p = bc_input(n)%p_static
+        ! t = bc_input(n)%t_static
+        ! !
+        ! r0 = bc_input(n)%rho_total
+        ! p0 = bc_input(n)%p_total
+        ! t0 = bc_input(n)%t_total
+        ! !
+        ! mach  = bc_input(n)%mach
+        ! alpha = bc_input(n)%alpha_aoa
+        ! beta  = bc_input(n)%beta_aoa
+        ! !
+        ! if (size(vel) == 1) then
+        !   vel(:) = [ bc_input(n)%vx ]
+        ! else if (size(vel) == 2) then
+        !   vel(:) = [ bc_input(n)%vx , bc_input(n)%vy ]
+        ! else if (size(vel) == 3) then
+        !   vel(:) = [ bc_input(n)%vx , bc_input(n)%vy , bc_input(n)%vz ]
+        ! end if
+        ! !
+        ! iterate_bc_conditions: do ii = 1,5
+        !   !
+        !   mach_is_set = ( mach < five*five .and. mach > zero )
+        !   vel_is_set  = ( norm2(vel) < ten12)
+        !   !
+        !   call igl(r,p,t,static_is_set,n)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"igl(r,p,t)")
+        !   call igl(r0,p0,t0,total_is_set,n)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"igl(r0,p0,t0)")
+        !   !
+        !   call mach_total_pres(p,p0,mach,mach_is_set,n)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"mach_total_pres")
+        !   call mach_total_temp(t,t0,mach,mach_is_set,n)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"mach_total_temp")
+        !   call mach_total_dens(r,r0,mach,mach_is_set,n)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"mach_total_dens")
+        !   !
+        !   call vel_from_static(r,p,t,vel,mach,alpha,beta,vel_is_set,mach_is_set)
+        !  !call dump_bc_conditions(ii,r,p,t,r0,p0,t0,vel,mach,alpha,beta, &
+        !  !                        static_is_set,total_is_set, &
+        !  !                        vel_is_set,mach_is_set,"vel_from_static")
+        !   !
+        !   if (static_is_set .and. vel_is_set) exit iterate_bc_conditions
+        !   !
+        !   if (ii == 5) then
+        !     write (error_message,1) n
+        !     call stop_gfr(stop_mpi,pname,__LINE__,__FILE__,error_message)
+        !   end if
+        !   !
+        ! end do iterate_bc_conditions
+        ! !
+        ! pv(nec) = r
+        ! pv(nmb:nme) = vel
+        ! pv(nee) = p
+        ! !
+        ! call check_bc_input(bc_input(n),pv,n)
+        ! !
+        ! pv(nec) = pv(nec) / rhoref
+        ! pv(nmb:nme) = pv(nmb:nme) / aref
+        ! pv(nee) = pv(nee) / rhoa2
+        ! !
+        ! cv(:) = vsp2u_sp(pv)
+        ! !
+        ! bc_in(i)%pv = pv(:) ! Using F2003 auto-reallocation
+        ! bc_in(i)%cv = cv(:) ! Using F2003 auto-reallocation
+        !===END===!
         !
         if (mypnum == glb_root) then
           !

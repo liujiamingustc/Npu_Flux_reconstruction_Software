@@ -11,7 +11,7 @@ module ovar
   use module_kind_types, only : visc_interface_fluxes
   use module_kind_types, only : laminar_flow
   use module_kind_types, only : one_work_unit
-  use module_kind_types, only : iout,zero,one,eps6
+  use module_kind_types, only : iout,zero,one,eps6,ten12
   use module_kind_types, only : Correction_gDG
   use module_kind_types, only : bc_unknown
   use module_kind_types, only : project_derivatives
@@ -52,9 +52,9 @@ module ovar
     real(wp) :: p_static   = -one
     real(wp) :: rho_static = -one
     real(wp) :: mach       = -one
-    real(wp) :: vx         = zero
-    real(wp) :: vy         = zero
-    real(wp) :: vz         = zero
+    real(wp) :: vx         = ten12
+    real(wp) :: vy         = ten12
+    real(wp) :: vz         = ten12
     real(wp) :: t_total    = -one
     real(wp) :: p_total    = -one
     real(wp) :: rho_total  = -one
@@ -183,7 +183,8 @@ module ovar
   logical(lk), public, save :: mms_output_solution = fals
   !
   ! INITIALIZATION / TEST CASE
-  integer, public, save :: itestcase = 9
+  ! Default value should be none of the test cases.
+  integer, public, save :: itestcase = -1
   !
   ! RESTART OPTIONS
   logical(lk),        public, save :: load_restart_file              = fals
@@ -454,9 +455,9 @@ continue
   if (abs(this%p_static  +one) > eps6) return
   if (abs(this%rho_static+one) > eps6) return
   if (abs(this%mach      +one) > eps6) return
-  if (abs(this%vx            ) > eps6) return
-  if (abs(this%vy            ) > eps6) return
-  if (abs(this%vz            ) > eps6) return
+  if (abs(this%vx/ten12  -one) > eps6) return
+  if (abs(this%vy/ten12  -one) > eps6) return
+  if (abs(this%vz/ten12  -one) > eps6) return
   if (abs(this%t_total   +one) > eps6) return
   if (abs(this%p_total   +one) > eps6) return
   if (abs(this%rho_total +one) > eps6) return
