@@ -263,6 +263,7 @@ subroutine read_nml_input_file(input_fname)
   use ovar,   only : Grid_Length
   use ovar,   only : LDG_beta,LDG_tau
   use ovar,   only : in_prof_file,in_prof_file_delimiter,in_prof_mat
+  use ovar,   only : sol_fields
   !
   use quadrature_mod, only : init_geom_quadrature_rules
   use quadrature_mod, only : init_face_quadrature_rules
@@ -279,7 +280,7 @@ subroutine read_nml_input_file(input_fname)
   character(len=*), intent(in) :: input_fname
   !
   !.. Local Scalars ..
-  integer  :: i,it1,it2,ierr,ival,inpt
+  integer  :: i,it1,it2,ierr,ival,inpt,j
   integer  :: Period_Timesteps_X,Period_Timesteps_Y
   logical(lk)  :: use_qdtr_face_pts,mms_error
   real(wp) :: Period_Time_X,Period_Time_Y
@@ -748,6 +749,27 @@ continue
     call reallocate(in_prof_mat,in_prof_mat_shape(1),in_prof_mat_shape(2))
     !
   end if
+  !
+  ! Make sure sol_fields has no duplicate elements
+  unique_sol_fields_loop : do i = 1, size(sol_fields)
+    if ( len_trim(adjustl(sol_fields(i))) == 0 ) then
+      !
+      ! No sol field is found.
+      exit unique_sol_fields_loop
+      !
+    end if
+    !
+    do j = i+1, size(sol_fields)
+      !
+      if ( uppercase(trim(adjustl(sol_fields(i)))) == &
+        uppercase(trim(adjustl(sol_fields(j)))) ) then
+          call stop_gfr(stop_mpi,pname,__LINE__,__FILE__, &
+            "sol_fields have duplicates!")
+      end if
+      !
+    end do
+    !
+  end do unique_sol_fields_loop
   !
   call debug_timer(leaving_procedure,pname)
   !
@@ -5909,6 +5931,7 @@ subroutine write_parallel_cgns_solution_file(sol_file,tname)
   use ovar,    only : interpolate_before_output_variable
   use ovar,    only : governing_equations
   use ovar,    only : profile_io_cgns
+  use ovar,    only : sol_fields
   use flowvar, only : usp,dusp
   !
   use module_limiters, only : marker,scaled_marker
@@ -5932,16 +5955,12 @@ subroutine write_parallel_cgns_solution_file(sol_file,tname)
   character(len=170)   :: cgns_sol_file
   character(len=300)   :: link_path
   !
-  !.. Local Allocatable Arrays ..
-#ifdef SPECIAL_FOR_INTEL
-  character(len=:), allocatable :: char_sname(:)
-#else
-  character(len=CGLEN), allocatable :: char_sname(:)
-#endif
-  !
   !.. Local Parameters ..
   character(len=*), parameter :: pname = "write_parallel_cgns_solution_file"
   character(len=*), parameter :: char_xyz(1:3) = ["X","Y","Z"]
+  character(len=*), parameter :: char_sdefault(1:3) = ["Density    ", &
+                                                       "Velocity   ", &
+                                                       "Pressure   "]
  !character(len=*), parameter :: char_sdefault(1:7) = ["Density         ", &
  !                                                     "Velocity        ", &
  !                                                     "Pressure        ", &
@@ -5949,12 +5968,12 @@ subroutine write_parallel_cgns_solution_file(sol_file,tname)
  !                                                     "Temperature     ", &
  !                                                     "ResolutionMarker", &
  !                                                     "JumpMarker      "]
-  character(len=*), parameter :: char_sdefault(1:6) = ["Density    ", &
-                                                       "Velocity   ", &
-                                                       "Pressure   ", &
-                                                       "Mach       ", &
-                                                       "Entropy    ", &
-                                                       "Temperature"]
+  ! character(len=*), parameter :: char_sdefault(1:6) = ["Density    ", &
+  !                                                      "Velocity   ", &
+  !                                                      "Pressure   ", &
+  !                                                      "Mach       ", &
+  !                                                      "Entropy    ", &
+  !                                                      "Temperature"]
  !character(len=*), parameter :: char_sdefault(1:8) = ["Density    ", &
  !                                                     "Velocity   ", &
  !                                                     "Pressure   ", &
@@ -6000,6 +6019,14 @@ subroutine write_parallel_cgns_solution_file(sol_file,tname)
   real(wp), allocatable, dimension(:,:,:) :: interp_dusp
   real(wp), allocatable, dimension(:)     :: marker_tmp
   !
+  !.. Local Allocatable Arrays ..
+#ifdef SPECIAL_FOR_INTEL
+  character(len=:), allocatable :: char_sname(:)
+#else
+  character(len=CGLEN) :: sol_field
+  character(len=CGLEN), allocatable :: char_sname(:)
+#endif
+  !
 continue
   !
   call debug_timer(entering_procedure,pname)
@@ -6038,17 +6065,54 @@ continue
   !
 #ifdef SPECIAL_FOR_INTEL
   char_sname = char_sdefault ! USING F2003 AUTO-REALLOCATION
-  if (need_vorticity) then
-    n = max( len("Vorticity") , len(char_sdefault) )
-    ! USING F2003 AUTO-REALLOCATION
-    char_sname = [ character(len=n) :: char_sname , "Vorticity" ]
-  end if
+  !
+  ! Drop the support for Taylor_Green_Vortex
+  !
+  ! if (itestcase == Taylor_Green_Vortex .and. need_vorticity) then
+  !   n = max( len("Vorticity") , len(char_sdefault) )
+  !   ! USING F2003 AUTO-REALLOCATION
+  !   char_sname = [ character(len=n) :: char_sname , "Vorticity" ]
+  ! end if
+  append_sol_field_loop : do k = 1, size(sol_fields)
+    !
+    if ( len_trim(adjustl(sol_fields(k))) == 0 ) then
+      !
+      ! No sol field is found.
+      exit append_sol_field_loop
+      !
+    end if
+      !
+      ! QUESTION: Is this a bug? Compared to the codes in the following GCC
+      ! branch.
+      n = max( len_trim(adjustl(sol_fields(k))), len(char_sdefault) )
+      ! USING F2003 AUTO-REALLOCATION
+      char_sname = [ character(len=n) :: char_sname, &
+        trim(adjustl(sol_fields(k))) ]
+      !
+  end do append_sol_field_loop
 #else
   char_sname = char_sdefault ! USING F2003 AUTO-REALLOCATION
-  if (need_vorticity) then
-    ! USING F2003 AUTO-REALLOCATION
-    char_sname = [ char_sname , "Vorticity" ]
-  end if
+  !
+  ! Drop the support for Taylor_Green_Vortex
+  !
+  ! if (itestcase == Taylor_Green_Vortex .and. need_vorticity) then
+  !   ! USING F2003 AUTO-REALLOCATION
+  !   char_sname = [ char_sname , "Vorticity" ]
+  ! end if
+  append_sol_field_loop : do k = 1, size(sol_fields)
+    !
+    if ( len_trim(adjustl(sol_fields(k))) == 0 ) then
+      !
+      ! No sol field is found.
+      exit append_sol_field_loop
+      !
+    end if
+      !
+      sol_field(:) = trim(adjustl(sol_fields(k)))
+      ! USING F2003 AUTO-REALLOCATION
+      char_sname = [ char_sname, sol_field ]
+      !
+  end do append_sol_field_loop
 #endif
   !
   ! Get the name of the current solution file

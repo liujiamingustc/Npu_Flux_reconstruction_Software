@@ -331,6 +331,10 @@ continue
   !
   call initialize_dusp
   !
+  ! Prepare to calculate the wall quantities including tau_wall.
+  !
+  ! call initialize_wall_quantities
+  !
   ! Output the boundary conditions
   !
   call write_bc_conditions
@@ -1722,10 +1726,6 @@ continue
       bc_in(i)%bc_type = bc_string_to_integer(bc_input(n)%bc_type_string)
       bc_in(i)%bc_name = bc_input(n)%name
       !
-      ! Set VX at the slip wall to be the same as the reference solution.
-      ! if ( bc_in(i)%bc_type ==  ) then
-      !   bc_input(n)%vx =
-      ! end if
     end if
     !
     if ( bc_input(n)%has_default_flow_conditions() ) then
@@ -1989,6 +1989,31 @@ continue
             " BCs")
   !
 end subroutine create_bc_in
+!
+!###############################################################################
+!
+subroutine initialize_wall_quantities
+  !
+  ! Use Statements
+  ! use
+  !
+  ! Formal Arguments
+  ! intent(in)
+  !
+  ! Local Varaibles
+  ! integer
+  !
+  ! Local Parameter
+  character(len=*), parameter :: pname = "initialize_wall_quantities"
+  !
+continue
+  !
+  ! Find the wall surfaces
+  !
+  ! Allocate memory for Cf
+
+  !
+end subroutine initialize_wall_quantities
 !
 !###############################################################################
 !

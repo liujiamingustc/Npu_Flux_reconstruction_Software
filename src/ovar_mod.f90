@@ -332,6 +332,9 @@ module ovar
   ! OPTION TO OUTPUT BOUNDARY CONDITIONS TO TECPLOT FILE
   logical(lk), public, save :: output_bface_array = fals
   !
+  ! OPTION TO OUTPUT ADDITIONAL SOLUTION FIELDS
+  character(len=64), public, save :: sol_fields(1:20) = ''
+  !
   ! #################################
   ! ####   Non-Input Variables   ####
   ! #################################
@@ -661,6 +664,7 @@ module input_namelist_mod
   use ovar,      only : time_ave_vel_is_axisymm
   use ovar,      only : time_scaling_factor
   use ovar,      only : time_average_restart_files, restart_list_file
+  use ovar,      only : sol_fields
   use module_cgns_types, only : cgns_use_queue
   !
   implicit none
@@ -790,6 +794,8 @@ module input_namelist_mod
   namelist / input / bc_input
   ! INPUT PROFILE
   namelist / input / in_prof_file,in_prof_file_delimiter
+  ! POST FIELDS
+  namelist / input / sol_fields
   !
   ! CFL ADJUSTMENT NAMELIST
   !
