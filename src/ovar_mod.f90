@@ -377,12 +377,12 @@ module ovar
   !
   integer,  public, save :: itcur
   real(wp), public, save :: d_t
-  real(wp), public, save :: time
-  real(wp), public, save :: time_ref = 1.0_wp
+  real(wp), public, save :: time = -one
+  real(wp), public, save :: time_ref = one
   !
-  real(wp),     public, save :: saved_ave_time = 0.0_wp
-  real(wp),     public, save :: prev_ave_time = 0.0_wp
-  real(wp),     public, save :: ave_start_time = 0.0_wp
+  real(wp),     public, save :: saved_ave_time = zero
+  real(wp),     public, save :: prev_ave_time = zero
+  real(wp),     public, save :: ave_start_time = zero
   logical(ldk), public, save :: read_time_ave_restart = .false.
   !
   real(wp), public, save :: cfl_cycle_start

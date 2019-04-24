@@ -599,7 +599,7 @@ continue
           inquire (file="START_TIME_AVERAGING",exist=request_time_ave)
           !
           ! If stop was requested, delete the
-          ! STOP_GFR file and exit the main loop
+          ! START_TIME_AVERAGING file and exit the main loop
           !
           if (request_time_ave) then
             !
@@ -608,9 +608,6 @@ continue
             else
               write (iout,94)
             end if
-            !
-            ! We dont care about the exit status here since we are
-            ! going to be stopping execution after this anyways
             !
             open (newunit=i,file="START_TIME_AVERAGING",iostat=ierr)
             close (i,status="delete",iostat=ierr)

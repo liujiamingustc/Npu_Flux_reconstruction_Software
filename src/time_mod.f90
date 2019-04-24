@@ -1162,8 +1162,14 @@ continue
   if (.not. allocated(time_ave_variables)) then
     !
     v1 = "x"
-    v2 = merge( "r" , "y" , time_ave_vel_is_axisymm )
-    v3 = merge( "f" , "z" , time_ave_vel_is_axisymm )
+    v2 = "y"
+    v3 = "z"
+    !
+    ! Drop the support for time_ave_vel_is_axisymm.
+    ! I have no need for such things.
+    !
+    ! v2 = merge( "r" , "y" , time_ave_vel_is_axisymm )
+    ! v3 = merge( "f" , "z" , time_ave_vel_is_axisymm )
     !
     ! Since the time_ave_variables array isnt allocated, this means that a
     ! time-averaged restart file wasnt read and the start time of the
@@ -1188,9 +1194,9 @@ continue
       ! (with temperature instead of density)
       !
       ! USING F2003 AUTO-REALLOCATION
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , &
-                             "t" , "x" , "y" , "z" , "p" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , &
+      !                        "t" , "x" , "y" , "z" , "p" ]
       !
       ! Remaining are derived variables
       !
@@ -1198,58 +1204,58 @@ continue
       ! APPEND A NEW ARRAY ELEMENT ONTO THE time_ave_variables ARRAY
       ! FOR EACH ADDITIONAL TIME AVERAGED VARIABLE
       !
-      if (time_ave_vel_is_axisymm) then
-        time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                               time_ave_variables(:) , "d" // v2 ]
-        time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                               time_ave_variables(:) , "d" // v3 ]
-        time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                               time_ave_variables(:) , v2 ]
-        time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                               time_ave_variables(:) , v3 ]
-      end if
-      !
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v1 // v1 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v2 // v2 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v3 // v3 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v1 // v2 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v1 // v3 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v2 // v3 ]
-      !
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v1 // "t" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v2 // "t" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , v3 // "t" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "dt" ]
-      !
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v1 // v1 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v2 // v2 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v3 // v3 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v1 // v2 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v1 // v3 ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v2 // v3 ]
-      !
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v1 // "t" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v2 // "t" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "d" // v3 // "t" ]
+      ! if (time_ave_vel_is_axisymm) then
+      !   time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                          time_ave_variables(:) , "d" // v2 ]
+      !   time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                          time_ave_variables(:) , "d" // v3 ]
+      !   time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                          time_ave_variables(:) , v2 ]
+      !   time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                          time_ave_variables(:) , v3 ]
+      ! end if
+      ! !
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v1 // v1 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v2 // v2 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v3 // v3 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v1 // v2 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v1 // v3 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v2 // v3 ]
+      ! !
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v1 // "t" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v2 // "t" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , v3 // "t" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "dt" ]
+      ! !
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v1 // v1 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v2 // v2 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v3 // v3 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v1 // v2 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v1 // v3 ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v2 // v3 ]
+      ! !
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v1 // "t" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v2 // "t" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "d" // v3 // "t" ]
       !
       nvar = size(time_ave_variables)
       !
@@ -1261,22 +1267,28 @@ continue
       time_ave_variables = [ character(len=len(time_ave_variables)) :: &
                              "d" , "dx" , "dy" , "e" ]
       !
+      ! For time averaging, we do not need so many quantities. The primitive
+      ! variables could be obtained from the conservative variables.
+      ! 
       ! Next 4 are the primitive variables
       ! (with temperature instead of density)
       !
       ! USING F2003 AUTO-REALLOCATION
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "t" , "x" , "y" , "p" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "t" , "x" , "y" , "p" ]
       !
       ! Remaining are derived variables
+      ! I cannot see any usefulness of the product of velocity components.
       !
       ! USING F2003 AUTO-REALLOCATION
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "xx" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "yy" ]
-      time_ave_variables = [ character(len=len(time_ave_variables)) :: &
-                             time_ave_variables(:) , "xy" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "xx" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "yy" ]
+      ! time_ave_variables = [ character(len=len(time_ave_variables)) :: &
+      !                        time_ave_variables(:) , "xy" ]
+      !
+      ! TODO: Derived variables should be specified in the input file.
       !
       nvar = size(time_ave_variables)
       !
